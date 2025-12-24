@@ -1,0 +1,26 @@
+[project]
+name = "rag-workspace"
+version = "0.0.0"
+description = "RAG system with LangGraph, DeepSeek OCR, and ChromaDB"
+requires-python = ">=3.11"
+readme = "README.md"
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["src/common", "src/ingestion", "src/agents", "src/app"]
+
+[tool.uv.sources]
+common = { workspace = true }
+ingestion = { workspace = true }
+agents = { workspace = true }
+app = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
