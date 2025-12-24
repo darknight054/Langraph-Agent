@@ -342,8 +342,8 @@ def main():
     for output, img in zip(outputs_list, images):
         content = output.outputs[0].text
 
-        if "<｜end▁of▁sentence｜>" in content:  # repeat no eos
-            content = content.replace("<｜end▁of▁sentence｜>", "")
+        if "<|end▁of▁sentence|>" in content:  # repeat no eos
+            content = content.replace("<|end▁of▁sentence|>", "")
         else:
             if SKIP_REPEAT:
                 continue

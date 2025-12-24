@@ -188,8 +188,8 @@ def process_single_image(image: Image.Image, prompt: str = PROMPT) -> str:
     print(f"[DEBUG] Model output length: {len(result)} characters")
 
     # Clean up result
-    if "<｜end▁of▁sentence｜>" in result:
-        result = result.replace("<｜end▁of▁sentence｜>", "")
+    if "<|end▁of▁sentence|>" in result:
+        result = result.replace("<|end▁of▁sentence|>", "")
         print(f"[DEBUG] Removed end-of-sentence tokens")
 
     return result

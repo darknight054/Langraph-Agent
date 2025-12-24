@@ -148,7 +148,7 @@ class DeepseekOCRProcessor(ProcessorMixin):
         image_std: Tuple[float, float, float] = (0.5, 0.5, 0.5),
         normalize: bool = True,
         image_token: str = "<image>",
-        pad_token: str = "<｜▁pad▁｜>",
+        pad_token: str = "<|▁pad▁|>",
         add_special_token: bool = False,
         sft_format: str = "deepseek",
         mask_prompt: bool = True,
