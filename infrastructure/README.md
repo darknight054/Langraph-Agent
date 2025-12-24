@@ -73,6 +73,33 @@ curl http://localhost:8000/health
 - `POST /ocr/pdf` - Process PDF document
 - `POST /ocr/batch` - Process multiple files
 
+## Technical Details
+
+### Docker Image Specifications
+
+**Base Image:** `vllm/vllm-openai:v0.8.5`
+- Official vLLM image optimized for OpenAI-compatible API endpoints
+- Includes pre-configured vLLM engine with CUDA support
+
+**Python Dependencies:**
+- **PDF/Image Processing:** PyMuPDF, img2pdf, Pillow, numpy
+- **Model Utilities:** einops, easydict, addict
+- **API Server:** FastAPI 0.104.1, Uvicorn 0.24.0, python-multipart 0.0.6
+- **Performance:** flash-attn 2.7.3 (optimized attention mechanism)
+- **Compatibility:** tokenizers 0.13.3 (downgraded for DeepSeek-OCR compatibility)
+
+**Server Implementation:**
+- Entry point: `/usr/bin/python3 /app/start_server.py`
+- Framework: FastAPI with Uvicorn ASGI server
+- Port: 8000 (exposed and mapped to host)
+- DeepSeek-OCR source added to PYTHONPATH via `/app/DeepSeek-OCR-vllm`
+
+**Performance Optimizations:**
+- Flash Attention 2.7.3 for faster transformer inference
+- Configurable GPU memory utilization (default 80%)
+- Concurrent request handling (default max 3)
+- Health check endpoint with 120s startup grace period
+
 ## Configuration
 
 Environment variables in `docker-compose.yml`:
@@ -83,6 +110,8 @@ Environment variables in `docker-compose.yml`:
 | `MODEL_PATH` | /app/models/deepseek-ai/DeepSeek-OCR | Model weights path |
 | `MAX_CONCURRENCY` | 3 | Max concurrent requests |
 | `GPU_MEMORY_UTILIZATION` | 0.80 | GPU memory usage (80% for 12GB GPUs) |
+| `PYTHONPATH` | `/app/DeepSeek-OCR-vllm:${PYTHONPATH}` | Python module search path |
+| `PORT` | 8000 | API server port (internal) |
 
 ## Troubleshooting
 

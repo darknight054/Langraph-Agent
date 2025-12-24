@@ -82,6 +82,23 @@ assignment-langraph/
 1. **Python 3.11+**
 2. **UV** package manager: https://docs.astral.sh/uv/
 3. **DeepSeek OCR vLLM server** (for OCR):
+
+   The project includes a Docker-based infrastructure setup for running DeepSeek OCR locally.
+
+   **Quick start:**
+   ```bash
+   cd infrastructure
+   # Download model weights (~35GB)
+   mkdir -p models
+   huggingface-cli download deepseek-ai/DeepSeek-OCR --local-dir models/deepseek-ai/DeepSeek-OCR
+
+   # Build and run
+   docker-compose up -d
+   ```
+
+   See [infrastructure/README.md](infrastructure/README.md) for full setup instructions, prerequisites, and troubleshooting.
+
+   **Alternative:** Manual vLLM server (requires local setup):
    ```bash
    vllm serve deepseek-ai/DeepSeek-OCR \
      --logits_processors vllm.model_executor.models.deepseek_ocr:NGramPerReqLogitsProcessor \
