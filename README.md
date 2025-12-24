@@ -49,34 +49,30 @@ A production-grade Retrieval-Augmented Generation (RAG) system built with LangGr
 
 ```
 assignment-langraph/
-├── pyproject.toml              # UV workspace root
+├── pyproject.toml              # Single config with all dependencies
 ├── .env.example                # Environment template
 ├── data/                       # Sample PDFs
-├── src/
-│   ├── common/                 # Shared utilities
-│   │   └── src/common/
-│   │       ├── config.py       # Pydantic settings
-│   │       └── logging.py      # structlog config
-│   │
-│   ├── ingestion/              # Document ingestion
-│   │   └── src/ingestion/
-│   │       ├── ocr/            # DeepSeek OCR client
-│   │       ├── processor/      # PDF, cleaner, chunker
-│   │       ├── vectorstore/    # ChromaDB
-│   │       ├── pipeline.py     # Main orchestrator
-│   │       └── cli.py          # CLI interface
-│   │
-│   ├── agents/                 # LangGraph RAG
-│   │   └── src/agents/
-│   │       ├── nodes/          # Retriever, Generator, Validator, Response
-│   │       ├── state.py        # Shared state schema
-│   │       ├── graph.py        # LangGraph workflow
-│   │       └── chat.py         # Chat session
-│   │
-│   └── app/                    # Streamlit UI
-│       └── src/app/
-│           ├── main.py         # Entry point
-│           └── pages/          # Upload, Chat pages
+│
+├── common/                     # Shared utilities
+│   ├── config.py               # Pydantic settings
+│   └── logging.py              # structlog configuration
+│
+├── ingestion/                  # Document ingestion pipeline
+│   ├── ocr/                    # DeepSeek OCR client
+│   ├── processor/              # PDF, cleaner, chunker
+│   ├── vectorstore/            # ChromaDB
+│   ├── pipeline.py             # Main orchestrator
+│   └── cli.py                  # CLI interface
+│
+├── agents/                     # LangGraph RAG workflow
+│   ├── nodes/                  # Retriever, Generator, Validator, Response
+│   ├── state.py                # Shared state schema
+│   ├── graph.py                # LangGraph workflow
+│   └── chat.py                 # Chat session
+│
+├── app/                        # Streamlit UI
+│   ├── main.py                 # Entry point
+│   └── pages/                  # Upload, Chat pages
 │
 └── tests/
 ```
@@ -85,11 +81,7 @@ assignment-langraph/
 
 1. **Python 3.11+**
 2. **UV** package manager: https://docs.astral.sh/uv/
-3. **Poppler** (for PDF processing):
-   - Windows: Download from https://github.com/osber/poppler-windows/releases
-   - Mac: `brew install poppler`
-   - Linux: `apt install poppler-utils`
-4. **DeepSeek OCR vLLM server** (for OCR):
+3. **DeepSeek OCR vLLM server** (for OCR):
    ```bash
    vllm serve deepseek-ai/DeepSeek-OCR \
      --logits_processors vllm.model_executor.models.deepseek_ocr:NGramPerReqLogitsProcessor \
@@ -127,8 +119,8 @@ uv run ingestion ingest data/document.pdf
 # With page range:
 uv run ingestion ingest data/document.pdf --start-page 1 --end-page 10
 
-# Without contextual chunking (faster):
-uv run ingestion ingest data/document.pdf --no-context
+# With semantic chunking (faster, no LLM context):
+uv run ingestion ingest data/document.pdf --strategy semantic
 ```
 
 **List ingested documents:**
@@ -149,7 +141,7 @@ uv run ingestion delete <document_id>
 ### Streamlit Web Interface
 
 ```bash
-uv run streamlit run src/app/src/app/main.py
+uv run streamlit run app/main.py
 ```
 
 Then open http://localhost:8501 in your browser.
@@ -227,11 +219,27 @@ All settings via environment variables or `.env`:
 | `CHROMA_PERSIST_DIR` | `./chroma_db` | Vector store path |
 | `CHUNK_SIZE` | `512` | Tokens per chunk |
 | `CHUNK_OVERLAP` | `50` | Overlap tokens |
-| `ENABLE_CONTEXTUAL_CHUNKING` | `true` | Use Anthropic-style chunking |
+| `CHUNKING_STRATEGY` | `contextual` | `semantic` or `contextual` |
 | `RETRIEVAL_TOP_K` | `5` | Chunks to retrieve |
 | `MAX_RETRY_COUNT` | `3` | Max validation retries |
 
+## Sample Data
+
+The `data/` directory contains sample PDFs for testing:
+
+1. **HISTORY_OF_INDIA_FROM_THE_EARLIEST_TIME_122_AD.pdf** - Historical text about ancient India
+2. **Modern History Hand Written Notes (135 Pages) PDF.pdf** - Handwritten notes demonstrating OCR capabilities
+
 ## Sample Interaction
 
+Below is a sample chat session demonstrating the RAG system's workflow with validation:
+
+### Example 1: Successful Query
+
 ```
-User: What were the major events in Indian history around 122 AD?
+User: What were the major kingdoms in ancient India?
+
+[Retriever] Fetching top-5 relevant chunks from ChromaDB...
+[Generator] Generating answer using GPT-4o-mini with retrieved context...
+[Validator] Checking answer for hallucinations... PASSED (confidence: 0.94)
+[Response] Formatting final response with sources...

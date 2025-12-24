@@ -1,26 +1,46 @@
 [project]
-name = "rag-workspace"
-version = "0.0.0"
+name = "rag-system"
+version = "0.1.0"
 description = "RAG system with LangGraph, DeepSeek OCR, and ChromaDB"
 requires-python = ">=3.11"
 readme = "README.md"
+dependencies = [
+    # Common
+    "pydantic-settings>=2.0",
+    "python-dotenv>=1.0",
+    "structlog>=24.0",
+    "orjson>=3.9",
+    # Ingestion
+    "PyMuPDF>=1.24",  # Better PDF rendering than pdf2image (no poppler dependency)
+    "Pillow>=10.0",
+    "openai>=1.0",
+    "chromadb>=0.5",
+    "tiktoken>=0.5",
+    "langchain-text-splitters>=0.2",
+    "click>=8.0",
+    # Agents
+    "langgraph>=0.2",
+    "langchain-openai>=0.2",
+    "langchain-core>=0.3",
+    # App
+    "streamlit>=1.38",
+]
 
-[tool.uv]
-package = false
-
-[tool.uv.workspace]
-members = ["src/common", "src/ingestion", "src/agents", "src/app"]
-
-[tool.uv.sources]
-common = { workspace = true }
-ingestion = { workspace = true }
-agents = { workspace = true }
-app = { workspace = true }
-
-[dependency-groups]
+[project.optional-dependencies]
+observability = ["langfuse>=2.0"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "ruff>=0.8",
     "mypy>=1.13",
 ]
+
+[project.scripts]
+ingestion = "ingestion.cli:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["common", "ingestion", "agents", "app"]

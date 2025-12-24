@@ -65,7 +65,7 @@ class DeepSeekOCR(OCRProvider):
                 "role": "user",
                 "content": [
                     {"type": "image_url", "image_url": {"url": image_url}},
-                    {"type": "text", "text": "Free OCR."},
+                    {"type": "text", "text": "<|grounding|>Convert the document to markdown."},
                 ],
             }
         ]
@@ -74,6 +74,7 @@ class DeepSeekOCR(OCRProvider):
             model=self.model,
             messages=messages,
             max_tokens=8192,
+            temperature=0.0,  # Deterministic output for consistent OCR
             extra_body={
                 "skip_special_tokens": False,
                 "vllm_xargs": {
@@ -108,22 +109,41 @@ class DeepSeekOCR(OCRProvider):
         For handwritten notes: The model generally preserves the flow of
         handwritten content, converting it to readable text with appropriate
         line breaks and paragraph structure.
+
+        Note: Reference tags with bounding boxes are preserved for downstream
+        image extraction. They will be processed by ImageExtractor.
         """
         import re
 
-        # Remove DeepSeek special tokens
+        # Remove DeepSeek special tokens (including full-width unicode variants)
         special_tokens = [
             "<|ocr_start|>",
             "<|ocr_end|>",
             "<|im_start|>",
             "<|im_end|>",
             "<|endoftext|>",
+            # Full-width unicode variants (Japanese-style)
+            "<｜end▁of▁sentence｜>",
+            "<｜ocr_start｜>",
+            "<｜ocr_end｜>",
+            "<｜im_start｜>",
+            "<｜im_end｜>",
+            "<｜endoftext｜>",
         ]
         for token in special_tokens:
             text = text.replace(token, "")
 
+        # Remove grounding and quad tags (but preserve ref/box for image extraction)
+        text = re.sub(r"<\|grounding\|>", "", text)
+        text = re.sub(r"<\|quad_start\|>.*?<\|quad_end\|>", "", text, flags=re.DOTALL)
+
         # Clean up any remaining special token patterns like <|...|>
-        text = re.sub(r"<\|[^|]+\|>", "", text)
+        # BUT preserve reference tags for image extraction: <|ref|>...<|/ref|><|box_start|>...<|box_end|>
+        # We'll clean these after image extraction in the pipeline
+        text = re.sub(r"<\|(?!ref\|)(?!/ref\|)(?!box_start\|)(?!box_end\|)[^|]+\|>", "", text)
+
+        # Also handle full-width bars ｜
+        text = re.sub(r"<｜(?!ref｜)(?!/ref｜)(?!box_start｜)(?!box_end｜)[^｜]+｜>", "", text)
 
         # Normalize excessive whitespace while preserving paragraph breaks
         text = re.sub(r"\n{4,}", "\n\n\n", text)  # Max 3 newlines

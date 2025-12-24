@@ -1,4 +1,12 @@
-"""Text cleaning and normalization."""
+"""Text cleaning and normalization.
+
+Enhanced cleaning pipeline for OCR-extracted text including:
+- Encoding fixes for UTF-8 artifacts
+- Unicode normalization (NFKC)
+- Full-width character conversion
+- LaTeX symbol conversion for mathematical notation
+- OCR artifact removal
+"""
 
 import re
 import unicodedata
@@ -11,11 +19,75 @@ log = get_logger(__name__)
 class TextCleaner:
     """Clean and normalize OCR-extracted text."""
 
+    # LaTeX symbol replacements for mathematical notation
+    LATEX_REPLACEMENTS = {
+        r"\coloneqq": ":=",
+        r"\eqqcolon": "=:",
+        r"\leq": "<=",
+        r"\geq": ">=",
+        r"\neq": "!=",
+        r"\approx": "~",
+        r"\times": "x",
+        r"\div": "/",
+        r"\pm": "+/-",
+        r"\mp": "-/+",
+        r"\cdot": ".",
+        r"\ldots": "...",
+        r"\infty": "infinity",
+        r"\alpha": "alpha",
+        r"\beta": "beta",
+        r"\gamma": "gamma",
+        r"\delta": "delta",
+        r"\epsilon": "epsilon",
+        r"\theta": "theta",
+        r"\lambda": "lambda",
+        r"\mu": "mu",
+        r"\pi": "pi",
+        r"\sigma": "sigma",
+        r"\omega": "omega",
+        r"\sum": "sum",
+        r"\prod": "prod",
+        r"\int": "integral",
+        r"\partial": "d",
+        r"\nabla": "nabla",
+        r"\forall": "for all",
+        r"\exists": "exists",
+        r"\in": "in",
+        r"\notin": "not in",
+        r"\subset": "subset",
+        r"\supset": "superset",
+        r"\cup": "union",
+        r"\cap": "intersection",
+        r"\emptyset": "empty set",
+        r"\rightarrow": "->",
+        r"\leftarrow": "<-",
+        r"\leftrightarrow": "<->",
+        r"\Rightarrow": "=>",
+        r"\Leftarrow": "<=",
+        r"\Leftrightarrow": "<=>",
+    }
+
+    # Full-width to ASCII character mapping
+    FULLWIDTH_MAP = str.maketrans(
+        'ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ'
+        'ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ'
+        '０１２３４５６７８９'
+        '！＂＃＄％＆＇（）＊＋，－．／：；＜＝＞？＠'
+        '［＼］＾＿｀｛｜｝～　',
+        'abcdefghijklmnopqrstuvwxyz'
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        '0123456789'
+        '!"#$%&\'()*+,-./:;<=>?@'
+        '[\\]^_`{|}~ '
+    )
+
     def __init__(
         self,
         remove_headers_footers: bool = True,
         normalize_whitespace: bool = True,
         fix_encoding: bool = True,
+        convert_latex: bool = True,
+        normalize_fullwidth: bool = True,
     ):
         """Initialize text cleaner.
 
@@ -23,10 +95,14 @@ class TextCleaner:
             remove_headers_footers: Attempt to remove page headers/footers
             normalize_whitespace: Normalize whitespace characters
             fix_encoding: Fix common encoding issues
+            convert_latex: Convert LaTeX symbols to plain text
+            normalize_fullwidth: Convert full-width characters to ASCII
         """
         self.remove_headers_footers = remove_headers_footers
         self.normalize_whitespace = normalize_whitespace
         self.fix_encoding = fix_encoding
+        self.convert_latex = convert_latex
+        self.normalize_fullwidth = normalize_fullwidth
 
     def clean(self, text: str) -> str:
         """Clean and normalize text.
@@ -48,6 +124,14 @@ class TextCleaner:
 
         # Normalize unicode
         text = unicodedata.normalize("NFKC", text)
+
+        # Convert full-width characters to ASCII
+        if self.normalize_fullwidth:
+            text = self._normalize_fullwidth(text)
+
+        # Convert LaTeX symbols
+        if self.convert_latex:
+            text = self._convert_latex_symbols(text)
 
         # Remove control characters (except newlines and tabs)
         text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]", "", text)
@@ -130,6 +214,24 @@ class TextCleaner:
             r"\n[\s\-]*(?:Page\s*)?\d+(?:\s*of\s*\d+)?$", "", text, flags=re.I
         )
 
+        return text
+
+    def _normalize_fullwidth(self, text: str) -> str:
+        """Convert full-width characters to ASCII equivalents.
+
+        Full-width characters are common in CJK text and OCR output.
+        This normalizes them to standard ASCII for consistency.
+        """
+        return text.translate(self.FULLWIDTH_MAP)
+
+    def _convert_latex_symbols(self, text: str) -> str:
+        """Convert LaTeX mathematical notation to plain text.
+
+        This helps with documents containing mathematical formulas
+        that OCR might output with LaTeX notation.
+        """
+        for latex, replacement in self.LATEX_REPLACEMENTS.items():
+            text = text.replace(latex, replacement)
         return text
 
     def clean_batch(self, texts: list[str]) -> list[str]:

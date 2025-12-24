@@ -33,6 +33,18 @@ class Settings(BaseSettings):
         default="http://localhost:8000/v1",
         description="DeepSeek OCR vLLM server URL",
     )
+    ocr_dpi: int = Field(
+        default=150,
+        description="PDF rendering DPI for OCR (150 is optimal balance of quality/speed)",
+    )
+    ocr_prompt: str = Field(
+        default="<|grounding|>Convert the document to markdown.",
+        description="OCR prompt for DeepSeek model",
+    )
+    ocr_temperature: float = Field(
+        default=0.0,
+        description="OCR temperature (0.0 for deterministic output)",
+    )
 
     # Vector Store
     chroma_persist_dir: Path = Field(
@@ -67,6 +79,16 @@ class Settings(BaseSettings):
     chunking_strategy: ChunkingStrategy = Field(
         default=ChunkingStrategy.CONTEXTUAL,
         description="Chunking strategy: 'semantic' (fast) or 'contextual' (better retrieval)",
+    )
+
+    # Image Extraction
+    extract_images: bool = Field(
+        default=True,
+        description="Extract images from OCR output using reference tags",
+    )
+    image_output_dir: Path | None = Field(
+        default=None,
+        description="Directory for extracted images (None = use document directory)",
     )
 
     # RAG
