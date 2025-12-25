@@ -37,6 +37,8 @@ Your task is to verify that the answer:
 2. Actually answers the question asked
 3. Does not contain made-up facts or information not in the context
 4. Is complete and addresses the key aspects of the question
+5. Is clearly and coherently written and you understand it fully and is relevant to the question
+6. If the query is vague or ambiguous, indicate that more information is needed and mark as invalid
 
 Context provided to the AI:
 {context}
@@ -63,7 +65,7 @@ class ValidatorAgent:
         self,
         model: str = "gpt-4.1-mini-2025-04-14",
         temperature: float = 0.0,
-        confidence_threshold: float = 0.7,
+        confidence_threshold: float = 0.8,
     ):
         """Initialize validator agent.
 

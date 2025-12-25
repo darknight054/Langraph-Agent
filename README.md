@@ -238,7 +238,7 @@ All settings via environment variables or `.env`:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `OPENAI_API_KEY` | (required) | OpenAI API key |
-| `DEEPSEEK_OCR_URL` | `http://localhost:8000/v1` | vLLM server URL |
+| `DEEPSEEK_OCR_URL` | `http://localhost:8000/` | vLLM server URL |
 | `CHROMA_PERSIST_DIR` | `./chroma_db` | Vector store path |
 | `CHUNK_SIZE` | `512` | Tokens per chunk |
 | `CHUNK_OVERLAP` | `50` | Overlap tokens |
