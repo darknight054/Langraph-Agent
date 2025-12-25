@@ -10,6 +10,12 @@ A production-grade Retrieval-Augmented Generation (RAG) system built with LangGr
 - **Semantic Chunking** 768 tokens and 50 as sliding window
 - **Streamlit** web interface for document upload and chat
 
+## Demo
+
+<video controls src="demo/RAG%20Document%20Q%26A%20-%20Google%20Chrome%202025-12-25%2018-52-03.mp4"></video>
+
+[Download the demo video](demo/RAG%20Document%20Q%26A%20-%20Google%20Chrome%202025-12-25%2018-52-03.mp4)
+
 ## Architecture
 
 ```
