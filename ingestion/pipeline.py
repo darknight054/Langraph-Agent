@@ -185,7 +185,10 @@ class IngestionPipeline:
 
                     # Clean the text
                     cleaned_text = self.cleaner.clean(processed_text)
-                    page_texts.append((page_num, cleaned_text))
+
+                    # Skip empty pages (garbage content filtered by cleaner)
+                    if cleaned_text.strip():
+                        page_texts.append((page_num, cleaned_text))
 
                 report_progress("processing", pages_to_process, pages_to_process)
 
@@ -221,7 +224,10 @@ class IngestionPipeline:
 
                     # Clean the text
                     cleaned_text = self.cleaner.clean(processed_text)
-                    page_texts.append((page_num, cleaned_text))
+
+                    # Skip empty pages (garbage content filtered by cleaner)
+                    if cleaned_text.strip():
+                        page_texts.append((page_num, cleaned_text))
 
                 report_progress("ocr", len(images), len(images))
 

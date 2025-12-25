@@ -167,13 +167,20 @@ class TextCleaner:
         # Remove repeated/garbage lines
         text = self._remove_repeated_lines(text)
 
+        text = text.strip()
+
+        # Final check: if no alphanumeric content remains, return empty
+        if not self._has_meaningful_content(text):
+            log.debug("text_rejected_no_alphanumeric", original_len=original_len)
+            return ""
+
         log.debug(
             "text_cleaned",
             original_len=original_len,
             cleaned_len=len(text),
         )
 
-        return text.strip()
+        return text
 
     def _fix_encoding(self, text: str) -> str:
         """Fix common encoding issues."""
@@ -392,6 +399,17 @@ class TextCleaner:
         result.extend(pending_empty_lines)
 
         return '\n'.join(result)
+
+    def _has_meaningful_content(self, text: str) -> bool:
+        """Check if text has any alphanumeric content.
+
+        Args:
+            text: Text to check
+
+        Returns:
+            True if text has at least one alphanumeric character
+        """
+        return any(c.isalnum() for c in text)
 
     def _remove_ocr_tags(self, text: str) -> str:
         """Remove DeepSeek OCR reference and detection tags.
