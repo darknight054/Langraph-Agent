@@ -158,6 +158,15 @@ class TextCleaner:
         # Remove URLs and website-related patterns
         text = self._remove_urls_and_weblinks(text)
 
+        # Convert HTML tables to plain text
+        text = self._convert_html_tables(text)
+
+        # Clean remaining HTML tags
+        text = self._clean_html_tags(text)
+
+        # Remove repeated/garbage lines
+        text = self._remove_repeated_lines(text)
+
         log.debug(
             "text_cleaned",
             original_len=original_len,
@@ -253,6 +262,119 @@ class TextCleaner:
         text = re.sub(r'Webjournal\s*[:]\s*\S*', '', text, flags=re.IGNORECASE)
 
         return text
+
+    def _convert_html_tables(self, text: str) -> str:
+        """Convert HTML tables to plain text format.
+
+        DeepSeek OCR outputs tables with HTML tags like:
+        <table><tr><td>Cell1</td><td>Cell2</td></tr></table>
+
+        This converts them to a readable plain text format.
+        """
+        # Check if there are any table tags
+        if '<table>' not in text.lower():
+            return text
+
+        def table_to_text(match):
+            """Convert a single table match to plain text."""
+            table_html = match.group(0)
+
+            # Extract rows
+            rows = re.findall(r'<tr[^>]*>(.*?)</tr>', table_html, flags=re.DOTALL | re.IGNORECASE)
+
+            result_rows = []
+            for row in rows:
+                # Extract cells (td or th)
+                cells = re.findall(r'<t[dh][^>]*>(.*?)</t[dh]>', row, flags=re.DOTALL | re.IGNORECASE)
+
+                # Clean cell content
+                cleaned_cells = []
+                for cell in cells:
+                    # Remove nested HTML tags, convert <br> to space
+                    cell = re.sub(r'<br\s*/?>', ' ', cell, flags=re.IGNORECASE)
+                    cell = re.sub(r'<[^>]+>', '', cell)
+                    cell = cell.strip()
+                    cleaned_cells.append(cell)
+
+                if cleaned_cells:
+                    result_rows.append(' | '.join(cleaned_cells))
+
+            return '\n'.join(result_rows)
+
+        # Replace tables with plain text representation
+        text = re.sub(
+            r'<table[^>]*>.*?</table>',
+            table_to_text,
+            text,
+            flags=re.DOTALL | re.IGNORECASE
+        )
+
+        return text
+
+    def _clean_html_tags(self, text: str) -> str:
+        """Clean remaining HTML tags from OCR output.
+
+        Converts:
+        - <br> and <br/> to newlines
+        - Removes other HTML tags but keeps content
+        """
+        # Convert <br> tags to newlines
+        text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
+
+        # Remove any remaining HTML tags but keep their content
+        text = re.sub(r'<[^>]+>', '', text)
+
+        # Clean up HTML entities
+        html_entities = {
+            '&nbsp;': ' ',
+            '&amp;': '&',
+            '&lt;': '<',
+            '&gt;': '>',
+            '&quot;': '"',
+            '&#39;': "'",
+            '&apos;': "'",
+        }
+        for entity, char in html_entities.items():
+            text = text.replace(entity, char)
+
+        return text
+
+    def _remove_repeated_lines(self, text: str, max_repeats: int = 3) -> str:
+        """Remove excessively repeated lines (OCR garbage).
+
+        Detects patterns like "System -" repeated 100+ times
+        and reduces them to max_repeats occurrences.
+
+        Args:
+            text: Input text
+            max_repeats: Maximum times a line can repeat consecutively
+
+        Returns:
+            Text with repeated lines reduced
+        """
+        lines = text.split('\n')
+        if len(lines) < 2:
+            return text
+
+        result = []
+        prev_line = None
+        repeat_count = 0
+
+        for line in lines:
+            stripped = line.strip()
+
+            # Check if this line is same as previous (ignoring whitespace)
+            if stripped and stripped == prev_line:
+                repeat_count += 1
+                if repeat_count < max_repeats:
+                    result.append(line)
+                # Skip if we've exceeded max repeats
+            else:
+                result.append(line)
+                prev_line = stripped
+                repeat_count = 0
+
+        return '\n'.join(result)
 
     def _remove_ocr_tags(self, text: str) -> str:
         """Remove DeepSeek OCR reference and detection tags.
