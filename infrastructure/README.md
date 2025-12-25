@@ -110,7 +110,6 @@ Environment variables in `docker-compose.yml`:
 | `MODEL_PATH` | /app/models/deepseek-ai/DeepSeek-OCR | Model weights path |
 | `MAX_CONCURRENCY` | 3 | Max concurrent requests |
 | `GPU_MEMORY_UTILIZATION` | 0.80 | GPU memory usage (80% for 12GB GPUs) |
-| `PYTHONPATH` | `/app/DeepSeek-OCR-vllm:${PYTHONPATH}` | Python module search path |
 | `PORT` | 8000 | API server port (internal) |
 
 ## Troubleshooting
@@ -136,13 +135,7 @@ infrastructure/
 ├── docker-compose.yml                # Docker Compose configuration
 ├── Dockerfile                        # Container build instructions
 ├── start_server.py                   # FastAPI server entry point
-├── custom_config.py                  # OCR configuration (overrides)
-├── custom_deepseek_ocr.py            # OCR model implementation (overrides)
-├── custom_image_process.py           # Image processing utilities (overrides)
-├── custom_run_dpsk_ocr_pdf.py        # PDF OCR script (overrides)
-├── custom_run_dpsk_ocr_image.py      # Image OCR script (overrides)
-├── custom_run_dpsk_ocr_eval_batch.py # Batch evaluation script (overrides)
-├── DeepSeek-OCR/                     # Cloned from github.com/deepseek-ai/DeepSeek-OCR
+├── DeepSeek-OCR-vllm/                     # Cloned from github.com/deepseek-ai/DeepSeek-OCR and patched with https://github.com/Bogdanovich77/DeekSeek-OCR---Dockerized-API
 ├── models/                           # Model weights (download via HuggingFace)
 └── outputs/                          # OCR output directory
 ```

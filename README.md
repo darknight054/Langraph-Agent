@@ -5,8 +5,9 @@ A production-grade Retrieval-Augmented Generation (RAG) system built with LangGr
 - **DeepSeek OCR** via vLLM for document text extraction
 - **LangGraph** for agentic workflow orchestration with validation loops
 - **ChromaDB** for persistent vector storage
-- **OpenAI GPT** for embeddings and generation
-- **Contextual Chunking** based on Anthropic's research (49% retrieval improvement)
+- **Qwen3-Embedding-0.6B** for embeddings and generation
+- **Contextual Chunking** based on Anthropic's research (49% retrieval improvement) (support included not tried so might have errors)
+- **Semantic Chunking** 768 tokens and 50 as sliding window
 - **Streamlit** web interface for document upload and chat
 
 ## Architecture
@@ -98,14 +99,6 @@ assignment-langraph/
 
    See [infrastructure/README.md](infrastructure/README.md) for full setup instructions, prerequisites, and troubleshooting.
 
-   **Alternative:** Manual vLLM server (requires local setup):
-   ```bash
-   vllm serve deepseek-ai/DeepSeek-OCR \
-     --logits_processors vllm.model_executor.models.deepseek_ocr:NGramPerReqLogitsProcessor \
-     --no-enable-prefix-caching \
-     --mm-processor-cache-gb 0
-   ```
-
 ## Setup
 
 1. **Clone and navigate:**
@@ -136,8 +129,6 @@ uv run ingestion ingest data/document.pdf
 # With page range:
 uv run ingestion ingest data/document.pdf --start-page 1 --end-page 10
 
-# With semantic chunking (faster, no LLM context):
-uv run ingestion ingest data/document.pdf --strategy semantic
 ```
 
 **List ingested documents:**
@@ -250,19 +241,5 @@ All settings via environment variables or `.env`:
 
 The `data/` directory contains sample PDFs for testing:
 
-1. **HISTORY_OF_INDIA_FROM_THE_EARLIEST_TIME_122_AD.pdf** - Historical text about ancient India
-2. **Modern History Hand Written Notes (135 Pages) PDF.pdf** - Handwritten notes demonstrating OCR capabilities
-
-## Sample Interaction
-
-Below is a sample chat session demonstrating the RAG system's workflow with validation:
-
-### Example 1: Successful Query
-
-```
-User: What were the major kingdoms in ancient India?
-
-[Retriever] Fetching top-5 relevant chunks from ChromaDB...
-[Generator] Generating answer using GPT-4o-mini with retrieved context...
-[Validator] Checking answer for hallucinations... PASSED (confidence: 0.94)
-[Response] Formatting final response with sources...
+1. **handwritten.pdf** - Historical text about ancient India
+2. **normal.pdf** - Handwritten notes demonstrating OCR capabilities
