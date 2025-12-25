@@ -118,6 +118,9 @@ class TextCleaner:
 
         original_len = len(text)
 
+        # Remove OCR-specific reference tags first
+        text = self._remove_ocr_tags(text)
+
         # Fix encoding issues
         if self.fix_encoding:
             text = self._fix_encoding(text)
@@ -213,6 +216,29 @@ class TextCleaner:
         text = re.sub(
             r"\n[\s\-]*(?:Page\s*)?\d+(?:\s*of\s*\d+)?$", "", text, flags=re.I
         )
+
+        return text
+
+    def _remove_ocr_tags(self, text: str) -> str:
+        """Remove DeepSeek OCR reference and detection tags.
+
+        DeepSeek OCR outputs reference markers like:
+        <|ref|>text<|/ref|><|det|>[[x1, y1, x2, y2]]<|/det|>
+
+        These need to be stripped for clean text output.
+        """
+        # Remove complete reference+det tag pairs
+        text = re.sub(r'<\|ref\|>[^<]*<\|/ref\|><\|det\|>.*?<\|/det\|>', '', text, flags=re.DOTALL)
+
+        # Remove incomplete or malformed reference tags
+        text = re.sub(r'<\|ref\|>[^<]*<\|/ref\|>', '', text)
+        text = re.sub(r'<\|det\|>.*?<\|/det\|>', '', text, flags=re.DOTALL)
+
+        # Remove orphaned tags
+        text = re.sub(r'<\|ref\|>', '', text)
+        text = re.sub(r'<\|/ref\|>', '', text)
+        text = re.sub(r'<\|det\|>', '', text)
+        text = re.sub(r'<\|/det\|>', '', text)
 
         return text
 
