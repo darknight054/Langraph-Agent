@@ -5,12 +5,12 @@ import streamlit as st
 from agents import ChatSession
 
 
-# Agent status icons for display
+# Agent status icons for display (using Unicode emojis for proper rendering)
 AGENT_ICONS = {
-    "retriever": ":mag:",
-    "generator": ":_face:",
-    "validator": ":white_check_mark:",
-    "response": ":speech_balloon:",
+    "retriever": "🔍",
+    "generator": "🤖",
+    "validator": "✅",
+    "response": "💬",
 }
 
 

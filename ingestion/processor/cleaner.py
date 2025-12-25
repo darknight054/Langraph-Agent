@@ -155,6 +155,9 @@ class TextCleaner:
         # Remove common OCR artifacts
         text = self._remove_artifacts(text)
 
+        # Remove URLs and website-related patterns
+        text = self._remove_urls_and_weblinks(text)
+
         log.debug(
             "text_cleaned",
             original_len=original_len,
@@ -225,6 +228,29 @@ class TextCleaner:
         text = re.sub(
             r"\n[\s\-]*(?:Page\s*)?\d+(?:\s*of\s*\d+)?$", "", text, flags=re.I
         )
+
+        return text
+
+    def _remove_urls_and_weblinks(self, text: str) -> str:
+        """Remove URLs and website-related text patterns.
+
+        Removes:
+        - HTTP/HTTPS URLs
+        - Domain patterns (www.example.com, example.com)
+        - "Website - " or "Website:" prefixes
+        - "Webjournal:" patterns
+        """
+        # Remove HTTP/HTTPS URLs
+        text = re.sub(r'https?://[^\s\)\]]+', '', text)
+
+        # Remove standalone domain patterns
+        text = re.sub(r'(?:www\.)?[a-zA-Z0-9-]+\.(com|org|net|edu|io)\b/?', '', text, flags=re.IGNORECASE)
+
+        # Remove "Website - " or "Website:" prefixes (with or without trailing content on same line)
+        text = re.sub(r'Website\s*[-:]\s*\S*', '', text, flags=re.IGNORECASE)
+
+        # Remove "Webjournal:" patterns
+        text = re.sub(r'Webjournal\s*[:]\s*\S*', '', text, flags=re.IGNORECASE)
 
         return text
 
