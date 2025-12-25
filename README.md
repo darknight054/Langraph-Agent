@@ -241,5 +241,5 @@ All settings via environment variables or `.env`:
 
 The `data/` directory contains sample PDFs for testing:
 
-1. **handwritten.pdf** - Historical text about ancient India
-2. **normal.pdf** - Handwritten notes demonstrating OCR capabilities
+1. **handwritten.pdf** - Handwritten notes demonstrating OCR capabilities
+2. **normal.pdf** - Historical text about ancient India
