@@ -30,7 +30,7 @@ class IngestionPipeline:
         chunk_overlap: int | None = None,
         chunking_strategy: ChunkingStrategy | Literal["semantic", "contextual"] | None = None,
         dpi: int | None = None,
-        extract_images: bool = True,
+        extract_images: bool = False,
         image_output_dir: Path | str | None = None,
     ):
         """Initialize ingestion pipeline.
@@ -227,6 +227,7 @@ class IngestionPipeline:
 
             # Chunk the document
             report_progress("chunking", 0, 1)
+            log.info("texts_ready_for_chunking", page_text=page_texts[0])
             chunks = self.chunker.chunk_texts(
                 texts=[text for _, text in page_texts],
                 page_numbers=[page_num for page_num, _ in page_texts],

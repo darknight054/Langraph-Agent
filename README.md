@@ -122,7 +122,7 @@ assignment-langraph/
 
 3. **Install dependencies:**
    ```bash
-   uv sync --all-packages
+   uv sync
    ```
 
 ## Usage
