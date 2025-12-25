@@ -12,6 +12,23 @@ from ingestion.embeddings import get_embedding_model, EmbeddingModel
 
 log = get_logger(__name__)
 
+# Global embedding model for agents (lazy initialized, separate from ingestion)
+_agent_embedder: EmbeddingModel | None = None
+
+
+def get_agent_embedding_model() -> EmbeddingModel:
+    """Get or create shared embedding model for agents.
+
+    This singleton ensures the embedding model is loaded only once
+    for all agent operations, separate from ingestion pipeline.
+    """
+    global _agent_embedder
+    if _agent_embedder is None:
+        log.info("loading_agent_embedding_model")
+        _agent_embedder = get_embedding_model()
+        log.info("agent_embedding_model_loaded")
+    return _agent_embedder
+
 
 class RetrieverAgent:
     """Agent that retrieves relevant documents from ChromaDB."""
@@ -36,12 +53,8 @@ class RetrieverAgent:
         settings = get_settings()
         self.top_k = top_k
 
-        # Initialize embedding model using the abstraction
-        self.embedder: EmbeddingModel = get_embedding_model(
-            provider=embedding_provider,
-            model_name=embedding_model,
-            api_key=settings.openai_api_key,
-        )
+        # Use shared embedding model singleton (loaded only once)
+        self.embedder: EmbeddingModel = get_agent_embedding_model()
 
         # Initialize ChromaDB
         persist_path = Path(persist_dir) if persist_dir else settings.chroma_persist_dir

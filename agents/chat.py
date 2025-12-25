@@ -62,7 +62,7 @@ class ChatSession:
         return config
 
     def _extract_sources(self, state: RAGState) -> list[dict]:
-        """Extract source information from state."""
+        """Extract source information from state including text preview."""
         sources = []
         seen = set()
 
@@ -74,10 +74,14 @@ class ChatSession:
             source_key = f"{name}:{page}"
             if source_key not in seen:
                 seen.add(source_key)
+                # Add text preview (first 200 chars)
+                text = doc.page_content
+                text_preview = text[:200] + "..." if len(text) > 200 else text
                 sources.append({
                     "document": name,
                     "page": page,
                     "distance": metadata.get("distance"),
+                    "text": text_preview,
                 })
 
         return sources

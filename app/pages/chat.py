@@ -30,11 +30,11 @@ def render_chat_page():
     st.title("💬 Chat with Documents")
     st.markdown("Ask questions about your ingested documents.")
 
-    # Check if documents are ingested
+    # Check if documents are ingested (use retriever directly, not ingestion pipeline)
     try:
-        from ingestion import IngestionPipeline
-        pipeline = IngestionPipeline()
-        doc_count = pipeline.vectorstore.count()
+        from agents.nodes.retriever import get_retriever
+        retriever = get_retriever()
+        doc_count = retriever.collection.count()
 
         if doc_count == 0:
             st.warning(
@@ -59,9 +59,10 @@ def render_chat_page():
             if message["role"] == "assistant" and message.get("sources"):
                 with st.expander("📚 Sources", expanded=False):
                     for source in message["sources"]:
-                        st.markdown(
-                            f"- **{source['document']}**, Page {source['page']}"
-                        )
+                        st.markdown(f"**{source['document']}**, Page {source['page']}")
+                        if source.get("text"):
+                            st.caption(f'"{source["text"]}"')
+                        st.markdown("---")
 
     # Chat input
     if prompt := st.chat_input("Ask a question about your documents..."):
@@ -107,9 +108,10 @@ def render_chat_page():
                 if response.sources:
                     with st.expander("📚 Sources", expanded=False):
                         for source in response.sources:
-                            st.markdown(
-                                f"- **{source['document']}**, Page {source['page']}"
-                            )
+                            st.markdown(f"**{source['document']}**, Page {source['page']}")
+                            if source.get("text"):
+                                st.caption(f'"{source["text"]}"')
+                            st.markdown("---")
 
             except Exception as e:
                 status_container.empty()
