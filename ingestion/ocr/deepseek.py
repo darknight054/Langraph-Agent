@@ -123,12 +123,12 @@ class DeepSeekOCR(OCRProvider):
             "<|im_end|>",
             "<|endoftext|>",
             # Full-width unicode variants (Japanese-style)
-            "<｜end▁of▁sentence｜>",
-            "<｜ocr_start｜>",
-            "<｜ocr_end｜>",
-            "<｜im_start｜>",
-            "<｜im_end｜>",
-            "<｜endoftext｜>",
+            "<|end▁of▁sentence|>",
+            "<|ocr_start|>",
+            "<|ocr_end|>",
+            "<|im_start|>",
+            "<|im_end|>",
+            "<|endoftext|>",
         ]
         for token in special_tokens:
             text = text.replace(token, "")
@@ -142,8 +142,8 @@ class DeepSeekOCR(OCRProvider):
         # We'll clean these after image extraction in the pipeline
         text = re.sub(r"<\|(?!ref\|)(?!/ref\|)(?!box_start\|)(?!box_end\|)[^|]+\|>", "", text)
 
-        # Also handle full-width bars ｜
-        text = re.sub(r"<｜(?!ref｜)(?!/ref｜)(?!box_start｜)(?!box_end｜)[^｜]+｜>", "", text)
+        # Also handle full-width bars |
+        text = re.sub(r"<|(?!ref|)(?!/ref|)(?!box_start|)(?!box_end|)[^|]+|>", "", text)
 
         # Normalize excessive whitespace while preserving paragraph breaks
         text = re.sub(r"\n{4,}", "\n\n\n", text)  # Max 3 newlines

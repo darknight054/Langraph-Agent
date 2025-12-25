@@ -34,9 +34,6 @@ RUN pip install --no-cache-dir flash-attn==2.7.3 --no-build-isolation || echo "f
 # Downgrade tokenizers to compatible version if needed
 RUN pip install --no-cache-dir tokenizers==0.13.3 || echo "Using existing tokenizers version"
 
-# Add the DeepSeek-OCR directory to PYTHONPATH
-ENV PYTHONPATH="/app/DeepSeek-OCR-vllm:${PYTHONPATH}"
-
 # Create directories for outputs
 RUN mkdir -p /app/outputs
 

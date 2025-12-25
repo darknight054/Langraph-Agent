@@ -1,11 +1,10 @@
-version: '3.8'
-
 services:
   deepseek-ocr:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: deepseek-ocr-vllm
+    gpus: all
     ports:
       - "8000:8000"
     volumes:
@@ -15,14 +14,8 @@ services:
       - CUDA_VISIBLE_DEVICES=0
       - MODEL_PATH=/app/models/deepseek-ai/DeepSeek-OCR
       - MAX_CONCURRENCY=3
+      - NUM_WORKERS=4
       - GPU_MEMORY_UTILIZATION=0.80
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

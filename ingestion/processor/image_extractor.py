@@ -47,8 +47,8 @@ class ImageExtractor:
     # Matches: <|ref|>TYPE<|/ref|><|box_start|>(x1,y1),(x2,y2)<|box_end|>
     # Also handles full-width unicode variants
     REFERENCE_PATTERN = re.compile(
-        r'<[|｜]ref[|｜]>(\w+)<[|｜]/ref[|｜]>'
-        r'<[|｜]box_start[|｜]>\((\d+),(\d+)\),\((\d+),(\d+)\)<[|｜]box_end[|｜]>',
+        r'<[||]ref[||]>(\w+)<[||]/ref[||]>'
+        r'<[||]box_start[||]>\((\d+),(\d+)\),\((\d+),(\d+)\)<[||]box_end[||]>',
         re.IGNORECASE
     )
 
@@ -275,14 +275,14 @@ class ImageExtractor:
             Cleaned text
         """
         # Remove incomplete or malformed reference tags
-        text = re.sub(r'<[|｜]ref[|｜]>[^<]*<[|｜]/ref[|｜]>', '', text)
-        text = re.sub(r'<[|｜]box_start[|｜]>[^<]*<[|｜]box_end[|｜]>', '', text)
+        text = re.sub(r'<[||]ref[||]>[^<]*<[||]/ref[||]>', '', text)
+        text = re.sub(r'<[||]box_start[||]>[^<]*<[||]box_end[||]>', '', text)
 
         # Remove orphaned tags
-        text = re.sub(r'<[|｜]ref[|｜]>', '', text)
-        text = re.sub(r'<[|｜]/ref[|｜]>', '', text)
-        text = re.sub(r'<[|｜]box_start[|｜]>', '', text)
-        text = re.sub(r'<[|｜]box_end[|｜]>', '', text)
+        text = re.sub(r'<[||]ref[||]>', '', text)
+        text = re.sub(r'<[||]/ref[||]>', '', text)
+        text = re.sub(r'<[||]box_start[||]>', '', text)
+        text = re.sub(r'<[||]box_end[||]>', '', text)
 
         return text
 
