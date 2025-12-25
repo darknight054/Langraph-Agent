@@ -40,7 +40,7 @@ uv.lock
 .env
 .env.local
 .env.*.local
-
+.claude/
 # ChromaDB
 chroma_db/
 *.db

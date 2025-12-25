@@ -20,20 +20,20 @@ A production-grade Retrieval-Augmented Generation (RAG) system built with LangGr
 └───────────┼─────────────────────┼─────────────────────┼──────────┘
             │                     │                     │
             ▼                     ▼                     ▼
-┌───────────────────────┐  ┌─────────────────────────────────────┐
-│   Ingestion Pipeline  │  │          LangGraph Workflow          │
-│  ┌─────────────────┐  │  │  ┌─────────┐  ┌─────────┐  ┌──────┐ │
-│  │  PDF Processor  │  │  │  │Retriever│→ │Generator│→ │Valid.│ │
-│  └────────┬────────┘  │  │  └─────────┘  └────┬────┘  └──┬───┘ │
-│           ▼           │  │                    │          │      │
-│  ┌─────────────────┐  │  │                    ◄──────────┘      │
-│  │  DeepSeek OCR   │  │  │                 (retry if invalid)   │
-│  └────────┬────────┘  │  │                    │                 │
-│           ▼           │  │                    ▼                 │
-│  ┌─────────────────┐  │  │              ┌─────────┐             │
-│  │ Text Cleaner    │  │  │              │Response │             │
-│  └────────┬────────┘  │  │              └─────────┘             │
-│           ▼           │  └─────────────────────────────────────┘
+┌───────────────────────┐  ┌──────────────────────────────────────────────┐
+│   Ingestion Pipeline  │  │             LangGraph Workflow                 │
+│  ┌─────────────────┐  │  │  ┌────────┐ ┌─────────┐ ┌─────────┐ ┌──────┐  │
+│  │  PDF Processor  │  │  │  │Query   │→│Retriever│→│Generator│→│Valid.│  │
+│  └────────┬────────┘  │  │  │Rewriter│ └─────────┘ └────┬────┘ └──┬───┘  │
+│           ▼           │  │  └────────┘                  │         │      │
+│  ┌─────────────────┐  │  │                              ◄─────────┘      │
+│  │  DeepSeek OCR   │  │  │                           (retry if invalid)  │
+│  └────────┬────────┘  │  │                              │                │
+│           ▼           │  │                              ▼                │
+│  ┌─────────────────┐  │  │                        ┌─────────┐            │
+│  │ Text Cleaner    │  │  │                        │Response │            │
+│  └────────┬────────┘  │  │                        └─────────┘            │
+│           ▼           │  └──────────────────────────────────────────────┘
 │  ┌─────────────────┐  │                     │
 │  │Contextual Chunk │  │                     │
 │  └────────┬────────┘  │                     │
@@ -65,10 +65,10 @@ assignment-langraph/
 │   └── cli.py                  # CLI interface
 │
 ├── agents/                     # LangGraph RAG workflow
-│   ├── nodes/                  # Retriever, Generator, Validator, Response
-│   ├── state.py                # Shared state schema
+│   ├── nodes/                  # Query Rewriter, Retriever, Generator, Validator, Response
+│   ├── state.py                # Shared state schema (includes chat_history)
 │   ├── graph.py                # LangGraph workflow
-│   └── chat.py                 # Chat session
+│   └── chat.py                 # Chat session with conversation history
 │
 ├── app/                        # Streamlit UI
 │   ├── main.py                 # Entry point
@@ -182,25 +182,31 @@ print(response.content)
 
 ## LangGraph Workflow
 
-The RAG workflow follows this pattern with a retry loop for validation:
+The RAG workflow follows this pattern with query contextualization and a retry loop for validation:
 
 ```
-START → Retriever → Generator → Validator
-                                    │
-                            [is_valid?]
-                           /           \
-                      Yes /             \ No (retry < 3)
-                         ↓               ↓
-                    Response ←── Generator (with feedback)
-                         ↓
-                        END
+START → Query Rewriter → Retriever → Generator → Validator
+                                                      │
+                                              [is_valid?]
+                                             /           \
+                                        Yes /             \ No (retry < 3)
+                                           ↓               ↓
+                                      Response ←── Generator (with feedback)
+                                           ↓
+                                          END
 ```
 
 **Agents:**
-1. **Retriever**: Fetches top-k relevant chunks from ChromaDB
-2. **Generator**: Generates answer using GPT-4o-mini with context
-3. **Validator**: Checks for hallucinations using structured output
-4. **Response**: Formats final response with sources
+1. **Query Rewriter**: Contextualizes queries using conversation history (e.g., "tell me more about it" → "tell me more about machine learning")
+2. **Retriever**: Fetches top-k relevant chunks from ChromaDB using the contextualized query
+3. **Generator**: Generates answer using GPT-4o-mini with retrieved context
+4. **Validator**: Checks for hallucinations using structured output
+5. **Response**: Formats final response with sources
+
+**Conversation Context:**
+- The system maintains chat history across messages in a session
+- The Query Rewriter resolves references like "it", "that", "the previous topic" using conversation context
+- Original query is preserved separately from the contextualized query for logging/debugging
 
 ## Observability
 
