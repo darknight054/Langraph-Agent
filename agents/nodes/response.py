@@ -8,6 +8,16 @@ from agents.state import RAGState
 log = get_logger(__name__)
 
 
+def _call_status(state: RAGState, node: str, status: str, details: dict | None = None):
+    """Helper to call status callback if present."""
+    callback = state.get("status_callback")
+    if callback:
+        try:
+            callback(node, status, details)
+        except Exception:
+            pass  # Don't fail on callback errors
+
+
 def format_sources(documents: list[Document]) -> str:
     """Format source documents for display.
 
@@ -50,6 +60,8 @@ def response_node(state: RAGState) -> RAGState:
     Returns:
         Updated state with final response
     """
+    _call_status(state, "response", "Preparing response...", None)
+
     answer = state.get("generated_answer", "")
     documents = state.get("retrieved_docs", [])
     is_valid = state.get("is_valid", False)
@@ -59,6 +71,7 @@ def response_node(state: RAGState) -> RAGState:
     # Handle error case
     if error:
         log.warning("response_with_error", error=error)
+        _call_status(state, "response", "Complete (with error)", None)
         return {
             **state,
             "final_response": f"I encountered an error: {error}",
@@ -71,6 +84,7 @@ def response_node(state: RAGState) -> RAGState:
             retry_count=retry_count,
         )
         feedback = state.get("validation_feedback", "Unknown validation issue")
+        _call_status(state, "response", "Complete (validation failed)", {"retries": retry_count})
         return {
             **state,
             "final_response": (
@@ -90,6 +104,8 @@ def response_node(state: RAGState) -> RAGState:
         sources_count=len(documents),
         retry_count=retry_count,
     )
+
+    _call_status(state, "response", "Complete", {"sources": len(documents)})
 
     return {
         **state,

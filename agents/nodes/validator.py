@@ -165,6 +165,16 @@ def get_validator() -> ValidatorAgent:
     return _validator
 
 
+def _call_status(state: RAGState, node: str, status: str, details: dict | None = None):
+    """Helper to call status callback if present."""
+    callback = state.get("status_callback")
+    if callback:
+        try:
+            callback(node, status, details)
+        except Exception:
+            pass  # Don't fail on callback errors
+
+
 def validator_node(state: RAGState) -> RAGState:
     """Validator node for LangGraph.
 
@@ -183,6 +193,7 @@ def validator_node(state: RAGState) -> RAGState:
 
     # Skip validation if already marked valid (e.g., no-docs case)
     if state.get("is_valid"):
+        _call_status(state, "validator", "Skipped (no docs case)", None)
         return state
 
     if not answer:
@@ -194,6 +205,8 @@ def validator_node(state: RAGState) -> RAGState:
         }
 
     try:
+        _call_status(state, "validator", "Checking answer quality...", None)
+
         validator = get_validator()
         result = validator.validate(
             question=query,
@@ -208,6 +221,11 @@ def validator_node(state: RAGState) -> RAGState:
             retry_count=retry_count,
         )
 
+        if result.is_valid:
+            _call_status(state, "validator", f"Answer validated (confidence: {result.confidence:.2f})", {"confidence": result.confidence})
+        else:
+            _call_status(state, "validator", "Validation failed, retrying...", {"issues": result.issues})
+
         return {
             **state,
             "is_valid": result.is_valid,
@@ -217,9 +235,12 @@ def validator_node(state: RAGState) -> RAGState:
 
     except Exception as e:
         log.error("validator_failed", error=str(e))
-        # On validation error, accept the answer to avoid infinite loops
+        _call_status(state, "validator", f"Validation error: {str(e)}", None)
+        # On validation error, mark as invalid and let retry logic handle it
+        # This surfaces the error rather than silently accepting potentially bad answers
         return {
             **state,
-            "is_valid": True,
-            "validation_feedback": f"Validation skipped due to error: {str(e)}",
+            "is_valid": False,
+            "validation_feedback": f"Validation error: {str(e)}",
+            "error": f"Validation failed: {str(e)}",
         }

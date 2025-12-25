@@ -2,14 +2,26 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Iterator
+from typing import Iterator, Callable
 from uuid import uuid4
 
 from common import get_logger, get_settings
 from agents.graph import create_rag_graph, get_langfuse_handler
-from agents.state import RAGState
+from agents.state import RAGState, StatusCallback
 
 log = get_logger(__name__)
+
+# Global graph singleton for efficiency
+_rag_graph = None
+
+
+def get_rag_graph():
+    """Get or create the global RAG graph instance."""
+    global _rag_graph
+    if _rag_graph is None:
+        _rag_graph = create_rag_graph()
+        log.info("rag_graph_created")
+    return _rag_graph
 
 
 @dataclass
@@ -32,7 +44,7 @@ class ChatSession:
 
     def __post_init__(self):
         """Initialize the RAG graph."""
-        self._graph = create_rag_graph()
+        self._graph = get_rag_graph()  # Use singleton graph
         self._langfuse_handler = get_langfuse_handler()
         log.info("chat_session_created", session_id=self.session_id)
 
@@ -70,11 +82,12 @@ class ChatSession:
 
         return sources
 
-    def chat(self, user_message: str) -> Message:
+    def chat(self, user_message: str, status_callback: StatusCallback | None = None) -> Message:
         """Process a user message and return the assistant response.
 
         Args:
             user_message: The user's question
+            status_callback: Optional callback to report agent status updates
 
         Returns:
             Assistant Message with response and sources
@@ -100,6 +113,7 @@ class ChatSession:
             "retry_count": 0,
             "final_response": "",
             "error": None,
+            "status_callback": status_callback,
         }
 
         # Invoke the graph

@@ -5,6 +5,15 @@ import streamlit as st
 from agents import ChatSession
 
 
+# Agent status icons for display
+AGENT_ICONS = {
+    "retriever": ":mag:",
+    "generator": ":robot_face:",
+    "validator": ":white_check_mark:",
+    "response": ":speech_balloon:",
+}
+
+
 def init_session_state():
     """Initialize session state for chat."""
     if "chat_session" not in st.session_state:
@@ -65,31 +74,46 @@ def render_chat_page():
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Generate response
+        # Generate response with real-time status updates
         with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                try:
-                    response = st.session_state.chat_session.chat(prompt)
+            # Create status display container
+            status_container = st.empty()
 
-                    st.markdown(response.content)
+            def update_status(node: str, status: str, details: dict | None = None):
+                """Update the status display with current agent status."""
+                icon = AGENT_ICONS.get(node, ":hourglass:")
+                status_container.markdown(f"{icon} **{node.title()}**: {status}")
 
-                    # Store assistant message
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": response.content,
-                        "sources": response.sources,
-                    })
+            try:
+                # Pass status callback to chat session
+                response = st.session_state.chat_session.chat(
+                    prompt,
+                    status_callback=update_status
+                )
 
-                    # Show sources
-                    if response.sources:
-                        with st.expander("📚 Sources", expanded=False):
-                            for source in response.sources:
-                                st.markdown(
-                                    f"- **{source['document']}**, Page {source['page']}"
-                                )
+                # Clear status display
+                status_container.empty()
 
-                except Exception as e:
-                    st.error(f"Error generating response: {e}")
+                st.markdown(response.content)
+
+                # Store assistant message
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": response.content,
+                    "sources": response.sources,
+                })
+
+                # Show sources
+                if response.sources:
+                    with st.expander("📚 Sources", expanded=False):
+                        for source in response.sources:
+                            st.markdown(
+                                f"- **{source['document']}**, Page {source['page']}"
+                            )
+
+            except Exception as e:
+                status_container.empty()
+                st.error(f"Error generating response: {e}")
 
     # Clear chat button
     if st.session_state.messages:

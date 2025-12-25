@@ -1,9 +1,13 @@
 """Shared state schema for RAG workflow."""
 
 from dataclasses import dataclass, field
-from typing import TypedDict
+from typing import TypedDict, Callable, Any
 
 from langchain_core.documents import Document
+
+
+# Status callback type: (node_name: str, status: str, details: dict | None) -> None
+StatusCallback = Callable[[str, str, dict | None], None]
 
 
 class RAGState(TypedDict, total=False):
@@ -28,6 +32,7 @@ class RAGState(TypedDict, total=False):
     retry_count: int
     final_response: str
     error: str | None
+    status_callback: StatusCallback | None
 
 
 @dataclass

@@ -127,6 +127,16 @@ def get_generator() -> GeneratorAgent:
     return _generator
 
 
+def _call_status(state: RAGState, node: str, status: str, details: dict | None = None):
+    """Helper to call status callback if present."""
+    callback = state.get("status_callback")
+    if callback:
+        try:
+            callback(node, status, details)
+        except Exception:
+            pass  # Don't fail on callback errors
+
+
 def generator_node(state: RAGState) -> RAGState:
     """Generator node for LangGraph.
 
@@ -153,6 +163,7 @@ def generator_node(state: RAGState) -> RAGState:
 
     if not documents:
         log.warning("generator_no_docs")
+        _call_status(state, "generator", "No documents found", None)
         return {
             **state,
             "generated_answer": "I couldn't find any relevant information to answer your question.",
@@ -160,12 +171,19 @@ def generator_node(state: RAGState) -> RAGState:
         }
 
     try:
+        if retry_count > 0:
+            _call_status(state, "generator", f"Regenerating (attempt {retry_count + 1})...", {"retry": retry_count})
+        else:
+            _call_status(state, "generator", "Generating answer...", {"docs": len(documents)})
+
         generator = get_generator()
         answer = generator.generate(
             question=query,
             documents=documents,
             validation_feedback=validation_feedback if retry_count > 0 else None,
         )
+
+        _call_status(state, "generator", "Answer generated", {"length": len(answer)})
 
         log.info(
             "generator_complete",
@@ -182,6 +200,7 @@ def generator_node(state: RAGState) -> RAGState:
 
     except Exception as e:
         log.error("generator_failed", error=str(e))
+        _call_status(state, "generator", f"Error: {str(e)}", None)
         return {
             **state,
             "generated_answer": "",

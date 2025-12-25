@@ -11,6 +11,8 @@ Enhanced cleaning pipeline for OCR-extracted text including:
 import re
 import unicodedata
 
+from unidecode import unidecode
+
 from common import get_logger
 
 log = get_logger(__name__)
@@ -88,6 +90,7 @@ class TextCleaner:
         fix_encoding: bool = True,
         convert_latex: bool = True,
         normalize_fullwidth: bool = True,
+        normalize_unicode: bool = True,
     ):
         """Initialize text cleaner.
 
@@ -97,12 +100,14 @@ class TextCleaner:
             fix_encoding: Fix common encoding issues
             convert_latex: Convert LaTeX symbols to plain text
             normalize_fullwidth: Convert full-width characters to ASCII
+            normalize_unicode: Convert Unicode characters to ASCII (en-dash, smart quotes, etc.)
         """
         self.remove_headers_footers = remove_headers_footers
         self.normalize_whitespace = normalize_whitespace
         self.fix_encoding = fix_encoding
         self.convert_latex = convert_latex
         self.normalize_fullwidth = normalize_fullwidth
+        self.normalize_unicode = normalize_unicode
 
     def clean(self, text: str) -> str:
         """Clean and normalize text.
@@ -125,7 +130,11 @@ class TextCleaner:
         if self.fix_encoding:
             text = self._fix_encoding(text)
 
-        # Normalize unicode
+        # Normalize unicode to ASCII (en-dash, smart quotes, etc.)
+        if self.normalize_unicode:
+            text = self._normalize_unicode_to_ascii(text)
+
+        # Normalize unicode forms
         text = unicodedata.normalize("NFKC", text)
 
         # Convert full-width characters to ASCII
@@ -241,6 +250,18 @@ class TextCleaner:
         text = re.sub(r'<\|/det\|>', '', text)
 
         return text
+
+    def _normalize_unicode_to_ascii(self, text: str) -> str:
+        """Normalize Unicode characters to ASCII equivalents.
+
+        Converts characters like:
+        - – (en-dash) → -
+        - — (em-dash) → --
+        - " " (smart quotes) → "
+        - ' ' (smart apostrophes) → '
+        - é, ñ, etc. → e, n, etc.
+        """
+        return unidecode(text)
 
     def _normalize_fullwidth(self, text: str) -> str:
         """Convert full-width characters to ASCII equivalents.

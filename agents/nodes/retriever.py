@@ -125,6 +125,16 @@ def get_retriever() -> RetrieverAgent:
     return _retriever
 
 
+def _call_status(state: RAGState, node: str, status: str, details: dict | None = None):
+    """Helper to call status callback if present."""
+    callback = state.get("status_callback")
+    if callback:
+        try:
+            callback(node, status, details)
+        except Exception:
+            pass  # Don't fail on callback errors
+
+
 def retriever_node(state: RAGState) -> RAGState:
     """Retriever node for LangGraph.
 
@@ -147,8 +157,12 @@ def retriever_node(state: RAGState) -> RAGState:
         }
 
     try:
+        _call_status(state, "retriever", "Searching documents...", {"query": query[:50]})
+
         retriever = get_retriever()
         documents = retriever.retrieve(query)
+
+        _call_status(state, "retriever", f"Found {len(documents)} documents", {"count": len(documents)})
 
         log.info(
             "retriever_complete",
@@ -164,6 +178,7 @@ def retriever_node(state: RAGState) -> RAGState:
 
     except Exception as e:
         log.error("retriever_failed", error=str(e))
+        _call_status(state, "retriever", f"Error: {str(e)}", None)
         return {
             **state,
             "retrieved_docs": [],
