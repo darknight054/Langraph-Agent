@@ -39,6 +39,7 @@ Your task is to verify that the answer:
 4. Is complete and addresses the key aspects of the question
 5. Is clearly and coherently written and you understand it fully and is relevant to the question
 6. If the query is vague or ambiguous, indicate that more information is needed and mark as invalid
+7. Make sure the answer is not contradictory to the context.
 
 Context provided to the AI:
 {context}
