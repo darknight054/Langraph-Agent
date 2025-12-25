@@ -16,6 +16,13 @@ class ChunkingStrategy(str, Enum):
     CONTEXTUAL = "contextual"  # Semantic + LLM-generated context per chunk
 
 
+class EmbeddingProvider(str, Enum):
+    """Embedding provider options."""
+
+    OPENAI = "openai"  # OpenAI text-embedding models (requires API key)
+    HUGGINGFACE = "huggingface"  # Local HuggingFace models via sentence-transformers
+
+
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
@@ -25,13 +32,26 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # OpenAI
-    openai_api_key: str = Field(..., description="OpenAI API key")
+    # OpenAI (optional if using HuggingFace embeddings only)
+    openai_api_key: str | None = Field(
+        default=None,
+        description="OpenAI API key (required for OpenAI embeddings and contextual chunking)",
+    )
 
-    # DeepSeek OCR (vLLM endpoint)
+    # Embedding Configuration
+    embedding_provider: EmbeddingProvider = Field(
+        default=EmbeddingProvider.HUGGINGFACE,
+        description="Embedding provider: 'openai' or 'huggingface'",
+    )
+    embedding_model: str = Field(
+        default="Qwen/Qwen3-Embedding-0.6B",
+        description="Embedding model name (OpenAI model or HuggingFace model ID)",
+    )
+
+    # DeepSeek OCR (FastAPI server endpoint)
     deepseek_ocr_url: str = Field(
-        default="http://localhost:8000/v1",
-        description="DeepSeek OCR vLLM server URL",
+        default="http://localhost:8000",
+        description="DeepSeek OCR server URL",
     )
     ocr_dpi: int = Field(
         default=150,

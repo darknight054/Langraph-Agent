@@ -5,22 +5,23 @@ from typing import Any
 
 import chromadb
 from chromadb.config import Settings as ChromaSettings
-from openai import OpenAI
 
-from common import get_logger
+from common import get_logger, get_settings, EmbeddingProvider
 from ingestion.processor.chunker import Chunk
+from ingestion.embeddings import get_embedding_model, EmbeddingModel
 
 log = get_logger(__name__)
 
 
 class ChromaVectorStore:
-    """ChromaDB vector store with OpenAI embeddings."""
+    """ChromaDB vector store with configurable embeddings."""
 
     def __init__(
         self,
         persist_dir: Path | str = "./chroma_db",
         collection_name: str = "documents",
-        embedding_model: str = "text-embedding-3-small",
+        embedding_provider: EmbeddingProvider | str | None = None,
+        embedding_model: str | None = None,
         openai_api_key: str | None = None,
     ):
         """Initialize ChromaDB vector store.
@@ -28,16 +29,18 @@ class ChromaVectorStore:
         Args:
             persist_dir: Directory for persistent storage
             collection_name: Name of the collection
-            embedding_model: OpenAI embedding model to use
-            openai_api_key: OpenAI API key
+            embedding_provider: Embedding provider (openai or huggingface)
+            embedding_model: Embedding model name
+            openai_api_key: OpenAI API key (only used if provider is openai)
         """
         self.persist_dir = Path(persist_dir)
         self.collection_name = collection_name
-        self.embedding_model = embedding_model
 
-        # Initialize OpenAI client for embeddings
-        self.openai_client = (
-            OpenAI(api_key=openai_api_key) if openai_api_key else OpenAI()
+        # Initialize embedding model using the abstraction
+        self.embedder: EmbeddingModel = get_embedding_model(
+            provider=embedding_provider,
+            model_name=embedding_model,
+            api_key=openai_api_key,
         )
 
         # Initialize ChromaDB with persistent storage
@@ -56,15 +59,18 @@ class ChromaVectorStore:
             metadata={"hnsw:space": "cosine"},
         )
 
+        settings = get_settings()
         log.info(
             "vectorstore_initialized",
             persist_dir=str(self.persist_dir),
             collection=collection_name,
+            embedding_provider=settings.embedding_provider.value,
+            embedding_model=settings.embedding_model,
             existing_docs=self.collection.count(),
         )
 
     def _get_embeddings(self, texts: list[str]) -> list[list[float]]:
-        """Get embeddings for texts using OpenAI.
+        """Get embeddings for texts.
 
         Args:
             texts: List of texts to embed
@@ -72,15 +78,7 @@ class ChromaVectorStore:
         Returns:
             List of embedding vectors
         """
-        if not texts:
-            return []
-
-        response = self.openai_client.embeddings.create(
-            model=self.embedding_model,
-            input=texts,
-        )
-
-        return [item.embedding for item in response.data]
+        return self.embedder.get_embeddings(texts)
 
     def add_chunks(
         self,

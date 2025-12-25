@@ -5,10 +5,10 @@ from pathlib import Path
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 from langchain_core.documents import Document
-from openai import OpenAI
 
-from common import get_logger, get_settings
+from common import get_logger, get_settings, EmbeddingProvider
 from agents.state import RAGState
+from ingestion.embeddings import get_embedding_model, EmbeddingModel
 
 log = get_logger(__name__)
 
@@ -20,7 +20,8 @@ class RetrieverAgent:
         self,
         persist_dir: Path | str | None = None,
         collection_name: str = "documents",
-        embedding_model: str = "text-embedding-3-small",
+        embedding_provider: EmbeddingProvider | str | None = None,
+        embedding_model: str | None = None,
         top_k: int = 5,
     ):
         """Initialize retriever agent.
@@ -28,15 +29,19 @@ class RetrieverAgent:
         Args:
             persist_dir: ChromaDB persistence directory
             collection_name: Collection name
-            embedding_model: OpenAI embedding model
+            embedding_provider: Embedding provider (openai or huggingface)
+            embedding_model: Embedding model name
             top_k: Number of documents to retrieve
         """
         settings = get_settings()
         self.top_k = top_k
-        self.embedding_model = embedding_model
 
-        # Initialize OpenAI for embeddings
-        self.openai_client = OpenAI(api_key=settings.openai_api_key)
+        # Initialize embedding model using the abstraction
+        self.embedder: EmbeddingModel = get_embedding_model(
+            provider=embedding_provider,
+            model_name=embedding_model,
+            api_key=settings.openai_api_key,
+        )
 
         # Initialize ChromaDB
         persist_path = Path(persist_dir) if persist_dir else settings.chroma_persist_dir
@@ -55,16 +60,15 @@ class RetrieverAgent:
             "retriever_initialized",
             persist_dir=str(persist_path),
             collection=collection_name,
+            embedding_provider=settings.embedding_provider.value,
+            embedding_model=settings.embedding_model,
             doc_count=self.collection.count(),
         )
 
     def _get_embedding(self, text: str) -> list[float]:
         """Get embedding for query text."""
-        response = self.openai_client.embeddings.create(
-            model=self.embedding_model,
-            input=[text],
-        )
-        return response.data[0].embedding
+        embeddings = self.embedder.get_embeddings([text])
+        return embeddings[0] if embeddings else []
 
     def retrieve(self, query: str) -> list[Document]:
         """Retrieve relevant documents for a query.

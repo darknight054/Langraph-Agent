@@ -14,10 +14,12 @@ dependencies = [
     "PyMuPDF>=1.24",  # Better PDF rendering than pdf2image (no poppler dependency)
     "Pillow>=10.0",
     "openai>=1.0",
+    "httpx>=0.25.0",  # HTTP client for OCR server
     "chromadb>=0.5",
     "tiktoken>=0.5",
     "langchain-text-splitters>=0.2",
     "click>=8.0",
+    "sentence-transformers>=2.2.0",  # Local HuggingFace embeddings
     # Agents
     "langgraph>=0.2",
     "langchain-openai>=0.2",
