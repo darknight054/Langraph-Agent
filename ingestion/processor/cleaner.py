@@ -339,15 +339,17 @@ class TextCleaner:
 
         return text
 
-    def _remove_repeated_lines(self, text: str, max_repeats: int = 3) -> str:
+    def _remove_repeated_lines(self, text: str, max_repeats: int = 2) -> str:
         """Remove excessively repeated lines (OCR garbage).
 
         Detects patterns like "System -" repeated 100+ times
         and reduces them to max_repeats occurrences.
 
+        Handles cases where empty lines appear between repeated content.
+
         Args:
             text: Input text
-            max_repeats: Maximum times a line can repeat consecutively
+            max_repeats: Maximum times a line can repeat (default 2)
 
         Returns:
             Text with repeated lines reduced
@@ -357,22 +359,37 @@ class TextCleaner:
             return text
 
         result = []
-        prev_line = None
+        prev_non_empty = None
         repeat_count = 0
+        pending_empty_lines = []
 
         for line in lines:
             stripped = line.strip()
 
-            # Check if this line is same as previous (ignoring whitespace)
-            if stripped and stripped == prev_line:
+            # Handle empty lines - buffer them
+            if not stripped:
+                pending_empty_lines.append(line)
+                continue
+
+            # Check if this non-empty line matches previous non-empty line
+            if stripped == prev_non_empty:
                 repeat_count += 1
                 if repeat_count < max_repeats:
+                    # Add buffered empty lines and this line
+                    result.extend(pending_empty_lines)
                     result.append(line)
-                # Skip if we've exceeded max repeats
+                # Skip if we've exceeded max repeats (don't add empty lines either)
+                pending_empty_lines = []
             else:
+                # Different line - add buffered empty lines and this line
+                result.extend(pending_empty_lines)
                 result.append(line)
-                prev_line = stripped
-                repeat_count = 0
+                pending_empty_lines = []
+                prev_non_empty = stripped
+                repeat_count = 1  # This is the first occurrence
+
+        # Add any remaining empty lines at the end
+        result.extend(pending_empty_lines)
 
         return '\n'.join(result)
 

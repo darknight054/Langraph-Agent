@@ -115,7 +115,7 @@ class ValidatorAgent:
         """Validate an answer against the source documents.
 
         Args:
-            question: The original question
+            question: The question (already contextualized by query_rewriter)
             answer: The generated answer to validate
             documents: The source documents used for generation
 
@@ -186,7 +186,8 @@ def validator_node(state: RAGState) -> RAGState:
     Returns:
         Updated state with validation result
     """
-    query = state.get("query", "")
+    # Use contextualized query for validation, fall back to original
+    query = state.get("contextualized_query") or state.get("query", "")
     answer = state.get("generated_answer", "")
     documents = state.get("retrieved_docs", [])
     retry_count = state.get("retry_count", 0)

@@ -81,7 +81,7 @@ class GeneratorAgent:
         """Generate an answer based on retrieved documents.
 
         Args:
-            question: The user's question
+            question: The user's question (already contextualized by query_rewriter)
             documents: Retrieved context documents
             validation_feedback: Optional feedback from previous validation failure
 
@@ -148,7 +148,8 @@ def generator_node(state: RAGState) -> RAGState:
     Returns:
         Updated state with generated answer
     """
-    query = state.get("query", "")
+    # Use contextualized query for generation, fall back to original
+    query = state.get("contextualized_query") or state.get("query", "")
     documents = state.get("retrieved_docs", [])
     validation_feedback = state.get("validation_feedback")
     retry_count = state.get("retry_count", 0)

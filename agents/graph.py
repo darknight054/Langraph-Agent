@@ -7,6 +7,7 @@ from langgraph.graph import StateGraph, END
 from common import get_logger, get_settings
 from agents.state import RAGState
 from agents.nodes import (
+    query_rewriter_node,
     retriever_node,
     generator_node,
     validator_node,
@@ -57,10 +58,10 @@ def create_rag_graph() -> StateGraph:
     """Create the RAG workflow graph.
 
     The workflow follows this pattern:
-        START -> retriever -> generator -> validator -> [should_retry?]
-                                                            |
-                                              [valid] -> response -> END
-                                              [invalid & retries left] -> generator
+        START -> query_rewriter -> retriever -> generator -> validator -> [should_retry?]
+                                                                              |
+                                                                [valid] -> response -> END
+                                                                [invalid & retries left] -> generator
 
     Returns:
         Compiled LangGraph StateGraph
@@ -71,14 +72,18 @@ def create_rag_graph() -> StateGraph:
     graph = StateGraph(RAGState)
 
     # Add nodes
+    graph.add_node("query_rewriter", query_rewriter_node)
     graph.add_node("retriever", retriever_node)
     graph.add_node("generator", generator_node)
     graph.add_node("validator", validator_node)
     graph.add_node("response", response_node)
 
     # Define edges
-    # Start with retrieval
-    graph.set_entry_point("retriever")
+    # Start with query rewriting (contextualizes queries using chat history)
+    graph.set_entry_point("query_rewriter")
+
+    # Query Rewriter -> Retriever
+    graph.add_edge("query_rewriter", "retriever")
 
     # Retriever -> Generator
     graph.add_edge("retriever", "generator")
@@ -155,6 +160,7 @@ def invoke_rag(query: str) -> str:
     # Invoke the graph
     initial_state: RAGState = {
         "query": query,
+        "chat_history": [],
         "retrieved_docs": [],
         "generated_answer": "",
         "is_valid": False,

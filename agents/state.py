@@ -10,11 +10,20 @@ from langchain_core.documents import Document
 StatusCallback = Callable[[str, str, dict | None], None]
 
 
+class ChatMessage(TypedDict):
+    """A single chat message for conversation history."""
+
+    role: str  # "user" or "assistant"
+    content: str
+
+
 class RAGState(TypedDict, total=False):
     """State shared across all agents in the RAG workflow.
 
     Attributes:
-        query: The user's question
+        query: The user's original question (preserved)
+        contextualized_query: Query rewritten with conversation context (used for retrieval)
+        chat_history: Previous conversation messages for context
         retrieved_docs: Documents retrieved from vector store
         generated_answer: The LLM-generated answer
         is_valid: Whether the answer passed validation
@@ -25,6 +34,8 @@ class RAGState(TypedDict, total=False):
     """
 
     query: str
+    contextualized_query: str
+    chat_history: list[ChatMessage]
     retrieved_docs: list[Document]
     generated_answer: str
     is_valid: bool

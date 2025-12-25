@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from common import get_logger, get_settings
 from agents.graph import create_rag_graph, get_langfuse_handler
-from agents.state import RAGState, StatusCallback
+from agents.state import RAGState, StatusCallback, ChatMessage
 
 log = get_logger(__name__)
 
@@ -102,14 +102,21 @@ class ChatSession:
             message=user_message[:100],
         )
 
+        # Build chat history from previous messages (before adding current message)
+        chat_history: list[ChatMessage] = [
+            {"role": msg.role, "content": msg.content}
+            for msg in self.messages
+        ]
+
         # Add user message to history
         self.messages.append(
             Message(role="user", content=user_message)
         )
 
-        # Prepare initial state
+        # Prepare initial state with conversation history
         initial_state: RAGState = {
             "query": user_message,
+            "chat_history": chat_history,
             "retrieved_docs": [],
             "generated_answer": "",
             "is_valid": False,

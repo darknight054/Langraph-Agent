@@ -151,7 +151,9 @@ def _call_status(state: RAGState, node: str, status: str, details: dict | None =
 def retriever_node(state: RAGState) -> RAGState:
     """Retriever node for LangGraph.
 
-    Fetches relevant documents from the vector store based on the query.
+    Fetches relevant documents from the vector store based on the contextualized query.
+    Uses the contextualized_query (set by query_rewriter) for better search results
+    when the user references previous conversation context.
 
     Args:
         state: Current workflow state
@@ -159,9 +161,11 @@ def retriever_node(state: RAGState) -> RAGState:
     Returns:
         Updated state with retrieved documents
     """
-    query = state.get("query", "")
+    # Use contextualized query for retrieval, fall back to original query
+    search_query = state.get("contextualized_query") or state.get("query", "")
+    original_query = state.get("query", "")
 
-    if not query:
+    if not search_query:
         log.warning("retriever_no_query")
         return {
             **state,
@@ -170,16 +174,17 @@ def retriever_node(state: RAGState) -> RAGState:
         }
 
     try:
-        _call_status(state, "retriever", "Searching documents...", {"query": query[:50]})
+        _call_status(state, "retriever", "Searching documents...", {"query": search_query[:50]})
 
         retriever = get_retriever()
-        documents = retriever.retrieve(query)
+        documents = retriever.retrieve(search_query)
 
         _call_status(state, "retriever", f"Found {len(documents)} documents", {"count": len(documents)})
 
         log.info(
             "retriever_complete",
-            query=query[:50],
+            original_query=original_query[:50],
+            search_query=search_query[:50],
             docs_found=len(documents),
         )
 
