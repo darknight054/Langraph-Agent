@@ -5,7 +5,7 @@ and figures in the document along with their bounding box coordinates. This modu
 extracts those referenced regions and replaces the tags with markdown image links.
 
 Reference format:
-    <|ref|>image<|/ref|><|box_start|>(x1,y1),(x2,y2)<|box_end|>
+    <|ref|>image<|/ref|><|det|>[(x1,y1),(x2,y2)]<|/det|>
 
 Where coordinates are normalized to 0-999 range.
 """
@@ -44,12 +44,12 @@ class ImageExtractor:
     """
 
     # Pattern for reference tags with bounding boxes
-    # Matches: <|ref|>TYPE<|/ref|><|box_start|>(x1,y1),(x2,y2)<|box_end|>
-    # Also handles full-width unicode variants
+    # Matches: <|ref|>TYPE<|/ref|><|det|>COORDS<|/det|>
+    # where COORDS is typically [(x1,y1),(x2,y2)] but we capture it for parsing
+    # Uses escaped pipe \| for regex matching
     REFERENCE_PATTERN = re.compile(
-        r'<[||]ref[||]>(\w+)<[||]/ref[||]>'
-        r'<[||]box_start[||]>\((\d+),(\d+)\),\((\d+),(\d+)\)<[||]box_end[||]>',
-        re.IGNORECASE
+        r'<\|ref\|>(\w+)<\|/ref\|><\|det\|>(.+?)<\|/det\|>',
+        re.DOTALL
     )
 
     # Coordinate normalization factor (DeepSeek uses 0-999 range)
@@ -78,12 +78,60 @@ class ImageExtractor:
         references = []
         for match in self.REFERENCE_PATTERN.finditer(text):
             ref_type = match.group(1).lower()
-            x1 = int(match.group(2))
-            y1 = int(match.group(3))
-            x2 = int(match.group(4))
-            y2 = int(match.group(5))
+            coords_str = match.group(2)
+
+            # Parse coordinates from the det content
+            # Format is typically [(x1,y1),(x2,y2)] or variations
+            coords = self._parse_coordinates(coords_str)
+            if coords is None:
+                continue
+
+            x1, y1, x2, y2 = coords
             references.append((ref_type, x1, y1, x2, y2, match.start(), match.end()))
         return references
+
+    def _parse_coordinates(self, coords_str: str) -> tuple[int, int, int, int] | None:
+        """Parse coordinate string from det tag content.
+
+        Args:
+            coords_str: Coordinate string like "[(x1,y1),(x2,y2)]"
+
+        Returns:
+            Tuple of (x1, y1, x2, y2) or None if parsing fails
+        """
+        try:
+            # Try to evaluate as Python literal (safe for coordinate lists)
+            import ast
+            coords_list = ast.literal_eval(coords_str.strip())
+
+            # Handle different formats
+            if isinstance(coords_list, list) and len(coords_list) >= 1:
+                # Format: [(x1,y1),(x2,y2)] - first bounding box
+                if len(coords_list) >= 2:
+                    p1, p2 = coords_list[0], coords_list[1]
+                    if isinstance(p1, (list, tuple)) and isinstance(p2, (list, tuple)):
+                        return (int(p1[0]), int(p1[1]), int(p2[0]), int(p2[1]))
+                # Single point or other format - try to extract 4 numbers
+                flat = []
+                for item in coords_list:
+                    if isinstance(item, (list, tuple)):
+                        flat.extend(item)
+                    else:
+                        flat.append(item)
+                if len(flat) >= 4:
+                    return (int(flat[0]), int(flat[1]), int(flat[2]), int(flat[3]))
+        except (ValueError, SyntaxError, TypeError):
+            pass
+
+        # Fallback: try regex extraction for coordinates
+        coord_pattern = re.compile(r'\((\d+)\s*,\s*(\d+)\)')
+        matches = coord_pattern.findall(coords_str)
+        if len(matches) >= 2:
+            x1, y1 = int(matches[0][0]), int(matches[0][1])
+            x2, y2 = int(matches[1][0]), int(matches[1][1])
+            return (x1, y1, x2, y2)
+
+        return None
 
     def scale_coordinates(
         self,
@@ -266,7 +314,7 @@ class ImageExtractor:
         return cleaned_text, extracted_images
 
     def _clean_remaining_tags(self, text: str) -> str:
-        """Remove any remaining reference/box tags from text.
+        """Remove any remaining reference/det tags from text.
 
         Args:
             text: Text possibly containing leftover tags
@@ -274,15 +322,18 @@ class ImageExtractor:
         Returns:
             Cleaned text
         """
+        # Remove complete reference+det tag pairs
+        text = re.sub(r'<\|ref\|>[^<]*<\|/ref\|><\|det\|>.*?<\|/det\|>', '', text, flags=re.DOTALL)
+
         # Remove incomplete or malformed reference tags
-        text = re.sub(r'<[||]ref[||]>[^<]*<[||]/ref[||]>', '', text)
-        text = re.sub(r'<[||]box_start[||]>[^<]*<[||]box_end[||]>', '', text)
+        text = re.sub(r'<\|ref\|>[^<]*<\|/ref\|>', '', text)
+        text = re.sub(r'<\|det\|>.*?<\|/det\|>', '', text, flags=re.DOTALL)
 
         # Remove orphaned tags
-        text = re.sub(r'<[||]ref[||]>', '', text)
-        text = re.sub(r'<[||]/ref[||]>', '', text)
-        text = re.sub(r'<[||]box_start[||]>', '', text)
-        text = re.sub(r'<[||]box_end[||]>', '', text)
+        text = re.sub(r'<\|ref\|>', '', text)
+        text = re.sub(r'<\|/ref\|>', '', text)
+        text = re.sub(r'<\|det\|>', '', text)
+        text = re.sub(r'<\|/det\|>', '', text)
 
         return text
 
