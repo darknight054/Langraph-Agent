@@ -8,7 +8,7 @@ from agents import ChatSession
 # Agent status icons for display
 AGENT_ICONS = {
     "retriever": ":mag:",
-    "generator": ":robot_face:",
+    "generator": ":_face:",
     "validator": ":white_check_mark:",
     "response": ":speech_balloon:",
 }

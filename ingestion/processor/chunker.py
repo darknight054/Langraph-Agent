@@ -75,7 +75,7 @@ Please give a short succinct context to situate this chunk within the overall do
         chunk_size: int = 512,
         chunk_overlap: int = 50,
         strategy: ChunkingStrategy | Literal["semantic", "contextual"] = ChunkingStrategy.SEMANTIC,
-        context_model: str = "gpt-4o-mini",
+        context_model: str = "gpt-4.1-mini-2025-04-14",
         openai_api_key: str | None = None,
     ):
         """Initialize text chunker.
